@@ -113,6 +113,14 @@ export function DemoDashboard() {
           description: '用户获得等值hypeUSD稳定币',
           status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending',
         },
+    currentFlow === 'redeem'
+      ? undefined as unknown as DemoStep
+      : {
+          id: 5,
+          title: '铸造完成',
+          description: '本次铸造流程完成',
+          status: currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : 'pending',
+        },
     // 简化为4步核心路径，进度显示为4/4
   ]
 
@@ -320,7 +328,7 @@ export function DemoDashboard() {
           >
             <h3 className="text-xl font-bold text-white mb-6">完整流程</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {demoSteps.slice(1, 5).map((step, index) => (
+              {demoSteps.filter(Boolean).slice(1, (currentFlow === 'redeem' ? 5 : 6)).map((step, index) => (
                 <motion.div
                   key={step.id}
                   initial={{ opacity: 0, y: 20 }}

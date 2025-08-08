@@ -255,6 +255,7 @@ export const useDemoStore = create<DemoState>()(
           transactions: [depositTx, ...state.transactions],
           currentStep: 1,
           currentFlow: 'mint',
+          totalSteps: 5,
         })
         
         // 模拟交易处理时间
@@ -341,6 +342,8 @@ export const useDemoStore = create<DemoState>()(
           currentStep: 4,
           isProcessing: false
         }))
+        await new Promise(resolve => setTimeout(resolve, 300))
+        set({ currentStep: 5 })
       },
       
       // 模拟赎回流程（销毁hypeUSD -> 关闭对冲仓位 -> 取回USDT）
@@ -373,7 +376,7 @@ export const useDemoStore = create<DemoState>()(
         }
         
         // 进度：1/4（开始赎回：销毁hypeUSD）
-        set({ transactions: [burnTx, ...state.transactions], currentStep: 1, currentFlow: 'redeem' })
+        set({ transactions: [burnTx, ...state.transactions], currentStep: 1, currentFlow: 'redeem', totalSteps: 4 })
         
         await new Promise(resolve => setTimeout(resolve, 2000))
         
