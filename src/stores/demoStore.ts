@@ -280,32 +280,34 @@ export const useDemoStore = create<DemoState>()(
           description: '开立BTC空单对冲'
         }
         
-        set({
-          transactions: [hedgeTx, mintTx, ...state.transactions.map(tx => 
-            tx.id === depositTx.id ? { ...tx, status: 'completed' as const } : tx
-          )],
+        set((prev) => ({
+          transactions: [
+            hedgeTx,
+            mintTx,
+            ...prev.transactions.map(tx => tx.id === depositTx.id ? { ...tx, status: 'completed' as const } : tx),
+          ],
           currentStep: 2,
           demoWallet: {
-            ...state.demoWallet,
-            usdtBalance: parseFloat((state.demoWallet.usdtBalance - amount).toFixed(LIMITS.precision)),
-            hypeUSDBalance: parseFloat((state.demoWallet.hypeUSDBalance + minted).toFixed(LIMITS.precision)),
-            totalValue: parseFloat((state.demoWallet.totalValue + minted).toFixed(LIMITS.precision))
+            ...prev.demoWallet,
+            usdtBalance: parseFloat((prev.demoWallet.usdtBalance - amount).toFixed(LIMITS.precision)),
+            hypeUSDBalance: parseFloat((prev.demoWallet.hypeUSDBalance + minted).toFixed(LIMITS.precision)),
+            totalValue: parseFloat((prev.demoWallet.totalValue + minted).toFixed(LIMITS.precision))
           },
           protocolData: {
-            ...state.protocolData,
-            tvl: state.protocolData.tvl + amount
+            ...prev.protocolData,
+            tvl: prev.protocolData.tvl + amount
           },
-          dailyUsedAmount: state.dailyUsedAmount + amount
-        })
+          dailyUsedAmount: prev.dailyUsedAmount + amount
+        }))
         
         await new Promise(resolve => setTimeout(resolve, 1500))
         
-        // 完成所有交易
-        set({
-          transactions: state.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
-          currentStep: 3,
+        // 完成所有交易（开空单已完成 -> 进入“铸造完成”步骤）
+        set((prev) => ({
+          transactions: prev.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
+          currentStep: 4,
           isProcessing: false
-        })
+        }))
       },
       
       // 模拟赎回流程（销毁hypeUSD -> 取回USDT）
@@ -355,21 +357,24 @@ export const useDemoStore = create<DemoState>()(
           description: `赎回 ${received.toFixed(LIMITS.precision)} USDT`
         }
 
-        set({
-          transactions: [redeemTx, ...state.transactions.map(tx => (tx.id === withdrawTx.id ? { ...tx, status: 'completed' } : tx))],
+        set((prev) => ({
+          transactions: [
+            redeemTx,
+            ...prev.transactions.map(tx => (tx.id === withdrawTx.id ? { ...tx, status: 'completed' as const } : tx)),
+          ],
           demoWallet: {
-            ...state.demoWallet,
-            hypeUSDBalance: parseFloat((state.demoWallet.hypeUSDBalance - amount).toFixed(LIMITS.precision)),
-            usdtBalance: parseFloat((state.demoWallet.usdtBalance + received).toFixed(LIMITS.precision)),
-            totalValue: parseFloat((state.demoWallet.totalValue - amount).toFixed(LIMITS.precision))
+            ...prev.demoWallet,
+            hypeUSDBalance: parseFloat((prev.demoWallet.hypeUSDBalance - amount).toFixed(LIMITS.precision)),
+            usdtBalance: parseFloat((prev.demoWallet.usdtBalance + received).toFixed(LIMITS.precision)),
+            totalValue: parseFloat((prev.demoWallet.totalValue - amount).toFixed(LIMITS.precision))
           }
-        })
+        }))
 
         await new Promise(resolve => setTimeout(resolve, 1200))
-        set({
-          transactions: state.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
+        set((prev) => ({
+          transactions: prev.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
           isProcessing: false,
-        })
+        }))
       },
 
       // 授权模拟
