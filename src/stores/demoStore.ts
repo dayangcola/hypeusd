@@ -19,7 +19,7 @@ export const FEE_STRUCTURE = {
 // 演示模式的交易记录
 export interface DemoTransaction {
   id: string
-  type: 'deposit' | 'withdraw' | 'mint' | 'burn' | 'hedge' | 'rebalance'
+  type: 'deposit' | 'withdraw' | 'mint' | 'burn' | 'hedge' | 'rebalance' | 'spot' | 'unhedge'
   amount: number
   token: 'USDT' | 'hypeUSD' | 'BTC'
   timestamp: number
@@ -199,7 +199,7 @@ export const useDemoStore = create<DemoState>()(
       enableDemoMode: () => set({ isDemoMode: true }),
       disableDemoMode: () => set({ isDemoMode: false }),
       
-      // 模拟存款流程（存USDT -> 铸造hypeUSD）
+      // 模拟存款流程（存USDT -> 购买BTC现货 -> 开空单 -> 对冲完成 -> 铸造hypeUSD）
       simulateDeposit: async (amount: number) => {
         const state = get()
 
@@ -257,41 +257,40 @@ export const useDemoStore = create<DemoState>()(
         // 模拟交易处理时间
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        // 2. 完成存款，铸造hypeUSD（扣除手续费）
-        const minted = parseFloat((amount * (1 - FEE_STRUCTURE.depositFee)).toFixed(LIMITS.precision))
-        const mintTx: DemoTransaction = {
+        // 2. 使用USDT购买BTC现货（1:1价值）
+        const spotAmount = amount / state.protocolData.btcPrice
+        const buySpotTx: DemoTransaction = {
           id: (Date.now() + 1).toString(),
-          type: 'mint',
-          amount: minted,
-          token: 'hypeUSD',
-          timestamp: Date.now(),
-          status: 'pending',
-          description: `铸造 ${minted.toFixed(LIMITS.precision)} hypeUSD`
-        }
-        
-        // 3. 开立对冲头寸
-        const hedgeTx: DemoTransaction = {
-          id: (Date.now() + 2).toString(),
-          type: 'hedge',
-          amount: amount / state.protocolData.btcPrice,
+          type: 'spot',
+          amount: spotAmount,
           token: 'BTC',
           timestamp: Date.now(),
           status: 'pending',
-          description: '开立BTC空单对冲'
+          description: `购买BTC现货 ${spotAmount.toFixed(6)} BTC`
+        }
+
+        // 3. 开立BTC空单对冲
+        const hedgeTx: DemoTransaction = {
+          id: (Date.now() + 2).toString(),
+          type: 'hedge',
+          amount: spotAmount,
+          token: 'BTC',
+          timestamp: Date.now(),
+          status: 'pending',
+          description: '开立BTC永续空单对冲'
         }
         
         set((prev) => ({
           transactions: [
             hedgeTx,
-            mintTx,
+            buySpotTx,
             ...prev.transactions.map(tx => tx.id === depositTx.id ? { ...tx, status: 'completed' as const } : tx),
           ],
-          currentStep: 2,
+          currentStep: 2, // 购买BTC现货
           demoWallet: {
             ...prev.demoWallet,
             usdtBalance: parseFloat((prev.demoWallet.usdtBalance - amount).toFixed(LIMITS.precision)),
-            hypeUSDBalance: parseFloat((prev.demoWallet.hypeUSDBalance + minted).toFixed(LIMITS.precision)),
-            totalValue: parseFloat((prev.demoWallet.totalValue + minted).toFixed(LIMITS.precision))
+            totalValue: parseFloat((prev.demoWallet.totalValue).toFixed(LIMITS.precision))
           },
           protocolData: {
             ...prev.protocolData,
@@ -302,15 +301,46 @@ export const useDemoStore = create<DemoState>()(
         
         await new Promise(resolve => setTimeout(resolve, 1500))
         
-        // 完成所有交易（开空单已完成 -> 进入“铸造完成”步骤）
+        // 4. 完成对冲（将spot与hedge标记完成，Delta趋近0）
         set((prev) => ({
-          transactions: prev.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
+          transactions: prev.transactions.map(tx =>
+            (tx.id === buySpotTx.id || tx.id === hedgeTx.id) ? { ...tx, status: 'completed' as const } : tx
+          ),
+          hedgePosition: {
+            ...prev.hedgePosition,
+            btcSpot: parseFloat((prev.hedgePosition.btcSpot + spotAmount).toFixed(6)),
+            btcShort: parseFloat((prev.hedgePosition.btcShort + spotAmount).toFixed(6)),
+            deltaRatio: 0.0,
+          },
+          currentStep: 3, // 对冲完成
+        }))
+
+        await new Promise(resolve => setTimeout(resolve, 800))
+
+        // 5. 铸造 hypeUSD（扣除手续费），进入“铸造完成”步骤
+        const minted = parseFloat((amount * (1 - FEE_STRUCTURE.depositFee)).toFixed(LIMITS.precision))
+        const mintTx: DemoTransaction = {
+          id: (Date.now() + 3).toString(),
+          type: 'mint',
+          amount: minted,
+          token: 'hypeUSD',
+          timestamp: Date.now(),
+          status: 'completed',
+          description: `铸造 ${minted.toFixed(LIMITS.precision)} hypeUSD`
+        }
+        set((prev) => ({
+          transactions: [mintTx, ...prev.transactions],
+          demoWallet: {
+            ...prev.demoWallet,
+            hypeUSDBalance: parseFloat((prev.demoWallet.hypeUSDBalance + minted).toFixed(LIMITS.precision)),
+            totalValue: parseFloat((prev.demoWallet.totalValue + minted).toFixed(LIMITS.precision))
+          },
           currentStep: 4,
           isProcessing: false
         }))
       },
       
-      // 模拟赎回流程（销毁hypeUSD -> 取回USDT）
+      // 模拟赎回流程（销毁hypeUSD -> 关闭对冲仓位 -> 取回USDT）
       simulateWithdraw: async (amount: number) => {
         const state = get()
         // 基本校验
@@ -329,7 +359,7 @@ export const useDemoStore = create<DemoState>()(
 
         set({ isProcessing: true, lastError: undefined })
 
-        const withdrawTx: DemoTransaction = {
+        const burnTx: DemoTransaction = {
           id: Date.now().toString(),
           type: 'burn',
           amount,
@@ -339,12 +369,33 @@ export const useDemoStore = create<DemoState>()(
           description: `销毁 ${amount} hypeUSD`
         }
         
-        set({
-          transactions: [withdrawTx, ...state.transactions]
-        })
+        set({ transactions: [burnTx, ...state.transactions] })
         
         await new Promise(resolve => setTimeout(resolve, 2000))
         
+        // 关闭对冲仓位（等量平掉空单与现货），生成记录
+        const closeHedgeTx: DemoTransaction = {
+          id: (Date.now() + 1).toString(),
+          type: 'unhedge',
+          amount: Math.min(state.hedgePosition.btcShort, state.hedgePosition.btcSpot),
+          token: 'BTC',
+          timestamp: Date.now(),
+          status: 'completed',
+          description: '关闭对冲仓位（平空并卖出现货）'
+        }
+
+        set((prev) => ({
+          transactions: [closeHedgeTx, ...prev.transactions.map(tx => (tx.id === burnTx.id ? { ...tx, status: 'completed' as const } : tx))],
+          hedgePosition: {
+            ...prev.hedgePosition,
+            btcSpot: Math.max(0, prev.hedgePosition.btcSpot - closeHedgeTx.amount),
+            btcShort: Math.max(0, prev.hedgePosition.btcShort - closeHedgeTx.amount),
+            deltaRatio: 0.0,
+          },
+        }))
+
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
         // 赎回获得USDT（扣除手续费）
         const received = parseFloat((amount * (1 - FEE_STRUCTURE.redeemFee)).toFixed(LIMITS.precision))
         const redeemTx: DemoTransaction = {
@@ -360,7 +411,7 @@ export const useDemoStore = create<DemoState>()(
         set((prev) => ({
           transactions: [
             redeemTx,
-            ...prev.transactions.map(tx => (tx.id === withdrawTx.id ? { ...tx, status: 'completed' as const } : tx)),
+            ...prev.transactions.map(tx => (tx.id === burnTx.id ? { ...tx, status: 'completed' as const } : tx)),
           ],
           demoWallet: {
             ...prev.demoWallet,
