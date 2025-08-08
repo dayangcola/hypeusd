@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, Shield, Zap, Play } from 'lucide-react'
+import { ArrowRight, TrendingUp, Shield, Zap, Play, Globe, Link as LinkIcon } from 'lucide-react'
 
 export function Hero() {
   return (
@@ -23,7 +23,7 @@ export function Hero() {
             className="inline-flex items-center space-x-2 bg-gray-800/50 border border-gray-700 rounded-full px-4 py-2 mb-8"
           >
             <TrendingUp className="w-4 h-4 text-green-400" />
-            <span className="text-sm text-gray-300">基于Hyperliquid的Delta对冲协议</span>
+            <span className="text-sm text-gray-300">Hyperliquid优质流动性 + CoreWriter全链上对冲</span>
           </motion.div>
 
           {/* Main Heading */}
@@ -69,6 +69,14 @@ export function Hero() {
             <div className="flex items-center space-x-2 text-gray-300">
               <Zap className="w-5 h-5 text-yellow-400" />
               <span>即时流动性</span>
+            </div>
+            <div className="flex items-center space-x-2 text-gray-300">
+              <Globe className="w-5 h-5 text-cyan-400" />
+              <span>Hyperliquid流动性</span>
+            </div>
+            <div className="flex items-center space-x-2 text-gray-300">
+              <LinkIcon className="w-5 h-5 text-purple-400" />
+              <span>CoreWriter原子化对冲</span>
             </div>
           </motion.div>
 
