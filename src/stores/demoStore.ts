@@ -369,7 +369,8 @@ export const useDemoStore = create<DemoState>()(
           description: `销毁 ${amount} hypeUSD`
         }
         
-        set({ transactions: [burnTx, ...state.transactions] })
+        // 进度：1/4（开始赎回：销毁hypeUSD）
+        set({ transactions: [burnTx, ...state.transactions], currentStep: 1 })
         
         await new Promise(resolve => setTimeout(resolve, 2000))
         
@@ -384,6 +385,7 @@ export const useDemoStore = create<DemoState>()(
           description: '关闭对冲仓位（平空并卖出现货）'
         }
 
+        // 进度：2/4（关闭对冲仓位）
         set((prev) => ({
           transactions: [closeHedgeTx, ...prev.transactions.map(tx => (tx.id === burnTx.id ? { ...tx, status: 'completed' as const } : tx))],
           hedgePosition: {
@@ -392,6 +394,7 @@ export const useDemoStore = create<DemoState>()(
             btcShort: Math.max(0, prev.hedgePosition.btcShort - closeHedgeTx.amount),
             deltaRatio: 0.0,
           },
+          currentStep: 2,
         }))
 
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -408,6 +411,7 @@ export const useDemoStore = create<DemoState>()(
           description: `赎回 ${received.toFixed(LIMITS.precision)} USDT`
         }
 
+        // 进度：3/4（生成赎回USDT记录）
         set((prev) => ({
           transactions: [
             redeemTx,
@@ -418,13 +422,16 @@ export const useDemoStore = create<DemoState>()(
             hypeUSDBalance: parseFloat((prev.demoWallet.hypeUSDBalance - amount).toFixed(LIMITS.precision)),
             usdtBalance: parseFloat((prev.demoWallet.usdtBalance + received).toFixed(LIMITS.precision)),
             totalValue: parseFloat((prev.demoWallet.totalValue - amount).toFixed(LIMITS.precision))
-          }
+          },
+          currentStep: 3,
         }))
 
         await new Promise(resolve => setTimeout(resolve, 1200))
+        // 进度：4/4（赎回完成）
         set((prev) => ({
           transactions: prev.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
           isProcessing: false,
+          currentStep: 4,
         }))
       },
 
