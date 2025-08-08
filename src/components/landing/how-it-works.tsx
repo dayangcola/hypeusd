@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ArrowRight, Wallet, Bitcoin, TrendingDown, Coins } from 'lucide-react'
+import { ArrowRight, Wallet, Bitcoin, TrendingDown, Coins, Globe, Link as LinkIcon } from 'lucide-react'
 
 export function HowItWorks() {
   const steps = [
@@ -12,16 +12,16 @@ export function HowItWorks() {
       details: ['支持任意金额', '实时汇率转换', '无需KYC']
     },
     {
-      icon: Bitcoin,
-      title: '购买BTC',
-      description: '协议自动使用USDT购买等值BTC现货',
-      details: ['市价执行', '最优价格', '零滑点']
+      icon: Globe,
+      title: '在Hyperliquid购买BTC',
+      description: '通过Hyperliquid深度订单簿完成等值BTC现货撮合',
+      details: ['深度充足', '低滑点', '高吞吐']
     },
     {
       icon: TrendingDown,
-      title: '开立空单',
-      description: '在Hyperliquid开立等量BTC永续空单',
-      details: ['完美对冲', '自动平衡', '风险控制']
+      title: 'CoreWriter原子化对冲',
+      description: '通过CoreWriter组合原子交易：买现货 + 卖永续，同步完成对冲并链上结算',
+      details: ['原子性执行', '全链上透明', '可审计']
     },
     {
       icon: Coins,

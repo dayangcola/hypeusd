@@ -10,6 +10,7 @@ import {
   RefreshCw,
   DollarSign,
   Globe,
+  Link as LinkIcon,
   Users
 } from 'lucide-react'
 
@@ -30,17 +31,17 @@ export function Features() {
       color: 'from-green-500 to-emerald-500'
     },
     {
-      icon: Zap,
-      title: '极致流动性',
-      description: '基于Hyperliquid深度流动性，支持大额即时存取',
-      benefits: ['无滑点交易', '24/7可用', '毫秒级执行'],
-      color: 'from-yellow-500 to-orange-500'
+      icon: Globe,
+      title: 'Hyperliquid优质流动性',
+      description: '连接Hyperliquid深度订单簿，提供高吞吐、低滑点的执行体验',
+      benefits: ['深度与低滑点', '大额即时成交', '撮合与清算高稳定性'],
+      color: 'from-cyan-500 to-blue-500'
     },
     {
       icon: BarChart3,
-      title: '透明监控',
-      description: '实时展示协议状态、头寸信息和风险指标',
-      benefits: ['实时数据', '开源审计', '链上验证'],
+      title: '全链上透明',
+      description: 'CoreWriter 机制执行链上对冲与结算，过程透明可验证',
+      benefits: ['可审计交易路径', '链上状态可追踪', '事件级别可验证'],
       color: 'from-purple-500 to-pink-500'
     },
     {
@@ -51,10 +52,10 @@ export function Features() {
       color: 'from-red-500 to-rose-500'
     },
     {
-      icon: Users,
-      title: '社区治理',
-      description: '去中心化治理模式，让社区参与协议重要决策',
-      benefits: ['投票权利', '收益分享', '参数调整'],
+      icon: LinkIcon,
+      title: '原子化对冲执行',
+      description: '通过 CoreWriter 组合原子交易，完成现货+永续对冲的一体化执行',
+      benefits: ['一步到位', '失败回滚', '最优路径聚合'],
       color: 'from-indigo-500 to-blue-500'
     }
   ]
