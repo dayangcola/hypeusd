@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, Shield, Zap } from 'lucide-react'
+import { ArrowRight, TrendingUp, Shield, Zap, Play } from 'lucide-react'
 
 export function Hero() {
   return (
@@ -85,6 +85,13 @@ export function Hero() {
             >
               <span>开始使用</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
+            </Link>
+            <Link
+              href="/dapp"
+              className="group px-8 py-4 bg-blue-500/20 border-2 border-blue-500/30 text-blue-400 rounded-xl font-semibold text-lg hover:border-blue-400 hover:bg-blue-500/30 transition-all duration-200 flex items-center space-x-2"
+            >
+              <Play className="w-5 h-5" />
+              <span>免费体验</span>
             </Link>
             <Link
               href="/docs"

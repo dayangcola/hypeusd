@@ -98,6 +98,13 @@ export function CTA() {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
                 </Link>
                 <Link
+                  href="/dapp"
+                  className="group px-10 py-4 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-xl font-bold text-lg hover:bg-blue-500/30 hover:border-blue-400 transition-all duration-200 flex items-center space-x-3"
+                >
+                  <Star className="w-5 h-5" />
+                  <span>免费体验</span>
+                </Link>
+                <Link
                   href="/docs"
                   className="px-10 py-4 bg-gray-800/50 border border-gray-600 text-white rounded-xl font-bold text-lg hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200"
                 >
