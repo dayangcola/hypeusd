@@ -236,12 +236,43 @@ export function DemoDashboard() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-gray-800/50 rounded-2xl p-6"
+                  className="bg-gray-800/50 rounded-2xl p-6 relative overflow-hidden"
                 >
+                  {/* 铸造动画：当铸造步骤激活时展示一步的视觉反馈 */}
+                  {currentFlow === 'mint' && currentStep === 4 && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.98, 1.04, 1] }}
+                        transition={{ duration: 1.2, repeat: 1 }}
+                        className="absolute inset-0 rounded-2xl ring-4 ring-green-500/40"
+                      />
+                      <div className="pointer-events-none absolute inset-0">
+                        {[...Array(10)].map((_, i) => (
+                          <motion.span
+                            key={i}
+                            initial={{ opacity: 0, x: '50%', y: '50%', scale: 0.4 }}
+                            animate={{
+                              opacity: [0, 1, 0],
+                              x: [`calc(50% + ${Math.cos((i / 10) * 2 * Math.PI) * 80}px)`, `calc(50% + ${Math.cos((i / 10) * 2 * Math.PI) * 120}px)`],
+                              y: [`calc(50% + ${Math.sin((i / 10) * 2 * Math.PI) * 80}px)`, `calc(50% + ${Math.sin((i / 10) * 2 * Math.PI) * 120}px)`],
+                              scale: [0.4, 1, 0.4],
+                            }}
+                            transition={{ duration: 0.9, delay: i * 0.03, ease: 'easeOut' }}
+                            className="absolute w-2 h-2 rounded-full bg-green-400/80 shadow-[0_0_12px_rgba(74,222,128,0.6)]"
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 rounded-full hype-gradient flex items-center justify-center text-white font-bold">
+                    <motion.div
+                      animate={currentFlow === 'mint' && currentStep === 4 ? { scale: [1, 1.15, 1] } : {}}
+                      transition={{ duration: 0.6 }}
+                      className="w-10 h-10 rounded-full hype-gradient flex items-center justify-center text-white font-bold"
+                    >
                       {currentStep}
-                    </div>
+                    </motion.div>
                     <div className="flex-1">
                       <h4 className="text-lg font-bold text-white mb-2">
                         {demoSteps[currentStep]?.title}
