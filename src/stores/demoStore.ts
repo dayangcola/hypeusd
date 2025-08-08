@@ -342,7 +342,8 @@ export const useDemoStore = create<DemoState>()(
           currentStep: 4,
           isProcessing: false
         }))
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // 为了让您清楚看到第4步（铸造hypeUSD），此处停留 1.2 秒再进入第5步
+        await new Promise(resolve => setTimeout(resolve, 1200))
         set({ currentStep: 5 })
       },
       
