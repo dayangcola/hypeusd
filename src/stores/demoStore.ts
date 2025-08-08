@@ -45,6 +45,7 @@ interface DemoState {
   isProcessing: boolean
   lastError?: string
   lastTransactionHash?: string
+  currentFlow: 'idle' | 'mint' | 'redeem'
   
   // 用户数据
   demoWallet: {
@@ -153,6 +154,7 @@ export const useDemoStore = create<DemoState>()(
       isProcessing: false,
       lastError: undefined,
       lastTransactionHash: undefined,
+      currentFlow: 'idle',
       
       demoWallet: {
         address: '0xDemo...Address',
@@ -251,7 +253,8 @@ export const useDemoStore = create<DemoState>()(
         
         set({
           transactions: [depositTx, ...state.transactions],
-          currentStep: 1
+          currentStep: 1,
+          currentFlow: 'mint',
         })
         
         // 模拟交易处理时间
@@ -370,7 +373,7 @@ export const useDemoStore = create<DemoState>()(
         }
         
         // 进度：1/4（开始赎回：销毁hypeUSD）
-        set({ transactions: [burnTx, ...state.transactions], currentStep: 1 })
+        set({ transactions: [burnTx, ...state.transactions], currentStep: 1, currentFlow: 'redeem' })
         
         await new Promise(resolve => setTimeout(resolve, 2000))
         
@@ -542,6 +545,7 @@ export const useDemoStore = create<DemoState>()(
       resetDemo: () => {
         set({
           currentStep: 0,
+          currentFlow: 'idle',
           transactions: generateMockTransactions(),
           demoWallet: {
             address: '0xDemo...Address',

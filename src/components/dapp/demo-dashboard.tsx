@@ -39,6 +39,7 @@ export function DemoDashboard() {
     transactions,
     currentStep,
     totalSteps,
+    currentFlow,
     enableDemoMode,
     simulateDeposit,
     updateProtocolData,
@@ -59,30 +60,59 @@ export function DemoDashboard() {
       action: '开始演示',
       status: currentStep === 0 ? 'active' : currentStep > 0 ? 'completed' : 'pending'
     },
-    {
-      id: 1,
-      title: '存入USDT',
-      description: '用户存入USDT到协议中',
-      status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending'
-    },
-    {
-      id: 2,
-      title: '购买BTC现货',
-      description: '协议自动使用USDT购买等值BTC',
-      status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending'
-    },
-    {
-      id: 3,
-      title: '开立空单对冲',
-      description: '在Hyperliquid开立BTC永续空单',
-      status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending'
-    },
-    {
-      id: 4,
-      title: '铸造hypeUSD',
-      description: '用户获得等值hypeUSD稳定币',
-      status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending'
-    },
+    // 下面四步根据当前流程展示不同文案
+    currentFlow === 'redeem'
+      ? {
+          id: 1,
+          title: '销毁hypeUSD',
+          description: '销毁用户持有的hypeUSD',
+          status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending',
+        }
+      : {
+          id: 1,
+          title: '存入USDT',
+          description: '用户存入USDT到协议中',
+          status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 2,
+          title: '关闭对冲仓位',
+          description: '平掉BTC空单并卖出现货',
+          status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending',
+        }
+      : {
+          id: 2,
+          title: '购买BTC现货',
+          description: '协议自动使用USDT购买等值BTC',
+          status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 3,
+          title: '取回USDT',
+          description: '按1:1比例返还USDT（扣除手续费）',
+          status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending',
+        }
+      : {
+          id: 3,
+          title: '开立空单对冲',
+          description: '在Hyperliquid开立BTC永续空单',
+          status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 4,
+          title: '赎回完成',
+          description: '本次赎回流程完成',
+          status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending',
+        }
+      : {
+          id: 4,
+          title: '铸造hypeUSD',
+          description: '用户获得等值hypeUSD稳定币',
+          status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending',
+        },
     // 简化为4步核心路径，进度显示为4/4
   ]
 
