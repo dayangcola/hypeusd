@@ -3,6 +3,19 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// 交易限额与手续费配置（演示与真实一致的UI/逻辑约束）
+export const LIMITS = {
+  minDeposit: 100,
+  maxDeposit: 10000,
+  dailyLimit: 50000,
+  precision: 2,
+}
+
+export const FEE_STRUCTURE = {
+  depositFee: 0.001, // 0.1%
+  redeemFee: 0.001,  // 0.1%
+}
+
 // 演示模式的交易记录
 export interface DemoTransaction {
   id: string
@@ -29,6 +42,9 @@ export interface HedgePosition {
 interface DemoState {
   // 基础设置
   isDemoMode: boolean
+  isProcessing: boolean
+  lastError?: string
+  lastTransactionHash?: string
   
   // 用户数据
   demoWallet: {
@@ -60,6 +76,14 @@ interface DemoState {
   // 当前步骤
   currentStep: number
   totalSteps: number
+
+  // 限额与授权状态
+  dailyUsedAmount: number
+  dailyLimitResetAt: number
+  approvalStatus: {
+    USDT: boolean
+    hypeUSD: boolean
+  }
   
   // 操作方法
   enableDemoMode: () => void
@@ -68,6 +92,11 @@ interface DemoState {
   // 模拟交易
   simulateDeposit: (amount: number) => Promise<void>
   simulateWithdraw: (amount: number) => Promise<void>
+
+   // 授权与校验
+  simulateApproval: (token: 'USDT' | 'hypeUSD') => Promise<void>
+  checkDailyLimit: (amount: number) => boolean
+  calculateFees: (amount: number, type: 'mint' | 'redeem') => number
   
   // 更新数据
   updateProtocolData: () => void
@@ -121,6 +150,9 @@ export const useDemoStore = create<DemoState>()(
     (set, get) => ({
       // 初始状态
       isDemoMode: false,
+      isProcessing: false,
+      lastError: undefined,
+      lastTransactionHash: undefined,
       
       demoWallet: {
         address: '0xDemo...Address',
@@ -154,14 +186,57 @@ export const useDemoStore = create<DemoState>()(
       
       currentStep: 0,
       totalSteps: 6,
+
+      // 限额/授权初始状态
+      dailyUsedAmount: 0,
+      dailyLimitResetAt: Date.now(),
+      approvalStatus: {
+        USDT: false,
+        hypeUSD: false,
+      },
       
       // 操作方法
       enableDemoMode: () => set({ isDemoMode: true }),
       disableDemoMode: () => set({ isDemoMode: false }),
       
-      // 模拟存款流程
+      // 模拟存款流程（存USDT -> 铸造hypeUSD）
       simulateDeposit: async (amount: number) => {
         const state = get()
+
+        // 每日限额重置（跨天自动刷新）
+        const now = Date.now()
+        const oneDayMs = 24 * 60 * 60 * 1000
+        if (now - state.dailyLimitResetAt > oneDayMs) {
+          set({ dailyUsedAmount: 0, dailyLimitResetAt: now })
+        }
+
+        // 基本校验
+        if (Number.isNaN(amount) || amount <= 0) {
+          set({ lastError: '请输入正确的金额' });
+          return
+        }
+        if (amount < LIMITS.minDeposit) {
+          set({ lastError: `最低存入 ${LIMITS.minDeposit} USDT` });
+          return
+        }
+        if (amount > LIMITS.maxDeposit) {
+          set({ lastError: `单笔最多 ${LIMITS.maxDeposit} USDT` });
+          return
+        }
+        if (!state.checkDailyLimit(amount)) {
+          set({ lastError: '超过今日额度，请明日再试' });
+          return
+        }
+        if (amount > state.demoWallet.usdtBalance) {
+          set({ lastError: 'USDT 余额不足' });
+          return
+        }
+        if (!state.approvalStatus.USDT) {
+          set({ lastError: '请先授权 USDT' });
+          return
+        }
+
+        set({ isProcessing: true, lastError: undefined })
         
         // 1. 添加存款交易
         const depositTx: DemoTransaction = {
@@ -182,15 +257,16 @@ export const useDemoStore = create<DemoState>()(
         // 模拟交易处理时间
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-        // 2. 完成存款，开始购买BTC
+        // 2. 完成存款，铸造hypeUSD（扣除手续费）
+        const minted = parseFloat((amount * (1 - FEE_STRUCTURE.depositFee)).toFixed(LIMITS.precision))
         const mintTx: DemoTransaction = {
           id: (Date.now() + 1).toString(),
           type: 'mint',
-          amount: amount * 0.999, // 扣除0.1%手续费
+          amount: minted,
           token: 'hypeUSD',
           timestamp: Date.now(),
           status: 'pending',
-          description: `铸造 ${(amount * 0.999).toFixed(2)} hypeUSD`
+          description: `铸造 ${minted.toFixed(LIMITS.precision)} hypeUSD`
         }
         
         // 3. 开立对冲头寸
@@ -211,14 +287,15 @@ export const useDemoStore = create<DemoState>()(
           currentStep: 2,
           demoWallet: {
             ...state.demoWallet,
-            usdtBalance: state.demoWallet.usdtBalance - amount,
-            hypeUSDBalance: state.demoWallet.hypeUSDBalance + amount * 0.999,
-            totalValue: state.demoWallet.totalValue + amount * 0.999
+            usdtBalance: parseFloat((state.demoWallet.usdtBalance - amount).toFixed(LIMITS.precision)),
+            hypeUSDBalance: parseFloat((state.demoWallet.hypeUSDBalance + minted).toFixed(LIMITS.precision)),
+            totalValue: parseFloat((state.demoWallet.totalValue + minted).toFixed(LIMITS.precision))
           },
           protocolData: {
             ...state.protocolData,
             tvl: state.protocolData.tvl + amount
-          }
+          },
+          dailyUsedAmount: state.dailyUsedAmount + amount
         })
         
         await new Promise(resolve => setTimeout(resolve, 1500))
@@ -226,22 +303,38 @@ export const useDemoStore = create<DemoState>()(
         // 完成所有交易
         set({
           transactions: state.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
-          currentStep: 3
+          currentStep: 3,
+          isProcessing: false
         })
       },
       
-      // 模拟赎回流程
+      // 模拟赎回流程（销毁hypeUSD -> 取回USDT）
       simulateWithdraw: async (amount: number) => {
         const state = get()
-        
+        // 基本校验
+        if (Number.isNaN(amount) || amount <= 0) {
+          set({ lastError: '请输入正确的金额' });
+          return
+        }
+        if (amount > state.demoWallet.hypeUSDBalance) {
+          set({ lastError: 'hypeUSD 余额不足' });
+          return
+        }
+        if (!state.approvalStatus.hypeUSD) {
+          set({ lastError: '请先授权 hypeUSD' });
+          return
+        }
+
+        set({ isProcessing: true, lastError: undefined })
+
         const withdrawTx: DemoTransaction = {
           id: Date.now().toString(),
-          type: 'withdraw',
+          type: 'burn',
           amount,
           token: 'hypeUSD',
           timestamp: Date.now(),
           status: 'pending',
-          description: `赎回 ${amount} hypeUSD`
+          description: `销毁 ${amount} hypeUSD`
         }
         
         set({
@@ -250,17 +343,60 @@ export const useDemoStore = create<DemoState>()(
         
         await new Promise(resolve => setTimeout(resolve, 2000))
         
+        // 赎回获得USDT（扣除手续费）
+        const received = parseFloat((amount * (1 - FEE_STRUCTURE.redeemFee)).toFixed(LIMITS.precision))
+        const redeemTx: DemoTransaction = {
+          id: (Date.now() + 1).toString(),
+          type: 'withdraw',
+          amount: received,
+          token: 'USDT',
+          timestamp: Date.now(),
+          status: 'pending',
+          description: `赎回 ${received.toFixed(LIMITS.precision)} USDT`
+        }
+
         set({
-          transactions: state.transactions.map(tx => 
-            tx.id === withdrawTx.id ? { ...tx, status: 'completed' } : tx
-          ),
+          transactions: [redeemTx, ...state.transactions.map(tx => (tx.id === withdrawTx.id ? { ...tx, status: 'completed' } : tx))],
           demoWallet: {
             ...state.demoWallet,
-            hypeUSDBalance: state.demoWallet.hypeUSDBalance - amount,
-            usdtBalance: state.demoWallet.usdtBalance + amount * 0.999,
-            totalValue: state.demoWallet.totalValue - amount
+            hypeUSDBalance: parseFloat((state.demoWallet.hypeUSDBalance - amount).toFixed(LIMITS.precision)),
+            usdtBalance: parseFloat((state.demoWallet.usdtBalance + received).toFixed(LIMITS.precision)),
+            totalValue: parseFloat((state.demoWallet.totalValue - amount).toFixed(LIMITS.precision))
           }
         })
+
+        await new Promise(resolve => setTimeout(resolve, 1200))
+        set({
+          transactions: state.transactions.map(tx => ({ ...tx, status: 'completed' as const })),
+          isProcessing: false,
+        })
+      },
+
+      // 授权模拟
+      simulateApproval: async (token: 'USDT' | 'hypeUSD') => {
+        const state = get()
+        set({ isProcessing: true, lastError: undefined })
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        set({
+          approvalStatus: {
+            ...state.approvalStatus,
+            [token]: true,
+          },
+          isProcessing: false,
+        })
+      },
+
+      // 校验每日可用额度
+      checkDailyLimit: (amount: number) => {
+        const state = get()
+        return state.dailyUsedAmount + amount <= LIMITS.dailyLimit
+      },
+
+      // 手续费计算
+      calculateFees: (amount: number, type: 'mint' | 'redeem') => {
+        if (amount <= 0 || Number.isNaN(amount)) return 0
+        const rate = type === 'mint' ? FEE_STRUCTURE.depositFee : FEE_STRUCTURE.redeemFee
+        return parseFloat((amount * rate).toFixed(LIMITS.precision))
       },
       
       // 更新协议数据 (模拟实时变化)

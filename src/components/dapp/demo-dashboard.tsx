@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useDemoStore } from '@/stores/demoStore'
 import { FlowGuide } from './flow-guide'
+import { MintRedeemPanel } from './mint-redeem-panel'
 import { 
   Play, 
   Pause, 
@@ -288,6 +289,9 @@ export function DemoDashboard() {
 
       {isDemoMode && (
         <>
+          {/* Mint/Redeem 交互面板（放在完整流程上方）*/}
+          <MintRedeemPanel mode="demo" />
+
           {/* 流程步骤展示 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
