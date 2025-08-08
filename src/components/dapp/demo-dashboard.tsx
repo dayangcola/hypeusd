@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useDemoStore } from '@/stores/demoStore'
 import { FlowGuide } from './flow-guide'
+import { MintRedeemPanel } from './mint-redeem-panel'
 import { 
   Play, 
   Pause, 
@@ -38,6 +39,7 @@ export function DemoDashboard() {
     transactions,
     currentStep,
     totalSteps,
+    currentFlow,
     enableDemoMode,
     simulateDeposit,
     updateProtocolData,
@@ -58,42 +60,68 @@ export function DemoDashboard() {
       action: '开始演示',
       status: currentStep === 0 ? 'active' : currentStep > 0 ? 'completed' : 'pending'
     },
-    {
-      id: 1,
-      title: '存入USDT',
-      description: '用户存入USDT到协议中',
-      status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending'
-    },
-    {
-      id: 2,
-      title: '购买BTC现货',
-      description: '协议自动使用USDT购买等值BTC',
-      status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending'
-    },
-    {
-      id: 3,
-      title: '开立空单对冲',
-      description: '在Hyperliquid开立BTC永续空单',
-      status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending'
-    },
-    {
-      id: 4,
-      title: '铸造hypeUSD',
-      description: '用户获得等值hypeUSD稳定币',
-      status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending'
-    },
-    {
-      id: 5,
-      title: '收益生成',
-      description: '通过Funding费率持续获得收益',
-      status: currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : 'pending'
-    },
-    {
-      id: 6,
-      title: '自动再平衡',
-      description: 'Delta偏离时自动调整头寸',
-      status: currentStep === 6 ? 'active' : 'pending'
-    }
+    // 下面四步根据当前流程展示不同文案
+    currentFlow === 'redeem'
+      ? {
+          id: 1,
+          title: '销毁hypeUSD',
+          description: '销毁用户持有的hypeUSD',
+          status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending',
+        }
+      : {
+          id: 1,
+          title: '存入USDT',
+          description: '用户存入USDT到协议中',
+          status: currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 2,
+          title: '关闭对冲仓位',
+          description: '平掉BTC空单并卖出现货',
+          status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending',
+        }
+      : {
+          id: 2,
+          title: '购买BTC现货',
+          description: '协议自动使用USDT购买等值BTC',
+          status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 3,
+          title: '取回USDT',
+          description: '按1:1比例返还USDT（扣除手续费）',
+          status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending',
+        }
+      : {
+          id: 3,
+          title: '开立空单对冲',
+          description: '在Hyperliquid开立BTC永续空单',
+          status: currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? {
+          id: 4,
+          title: '赎回完成',
+          description: '本次赎回流程完成',
+          status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending',
+        }
+      : {
+          id: 4,
+          title: '铸造hypeUSD',
+          description: '用户获得等值hypeUSD稳定币',
+          status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending',
+        },
+    currentFlow === 'redeem'
+      ? undefined as unknown as DemoStep
+      : {
+          id: 5,
+          title: '铸造完成',
+          description: '本次铸造流程完成',
+          status: currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : 'pending',
+        },
+    // 简化为4步核心路径，进度显示为4/4
   ]
 
   // 自动播放演示
@@ -288,6 +316,9 @@ export function DemoDashboard() {
 
       {isDemoMode && (
         <>
+          {/* Mint/Redeem 交互面板（放在完整流程上方）*/}
+          <MintRedeemPanel mode="demo" />
+
           {/* 流程步骤展示 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -297,7 +328,7 @@ export function DemoDashboard() {
           >
             <h3 className="text-xl font-bold text-white mb-6">完整流程</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {demoSteps.slice(1, 5).map((step, index) => (
+              {demoSteps.filter(Boolean).slice(1, (currentFlow === 'redeem' ? 5 : 6)).map((step, index) => (
                 <motion.div
                   key={step.id}
                   initial={{ opacity: 0, y: 20 }}
