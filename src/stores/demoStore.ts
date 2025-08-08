@@ -185,7 +185,7 @@ export const useDemoStore = create<DemoState>()(
       transactions: generateMockTransactions(),
       
       currentStep: 0,
-      totalSteps: 6,
+      totalSteps: 4,
 
       // 限额/授权初始状态
       dailyUsedAmount: 0,

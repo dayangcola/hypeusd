@@ -83,18 +83,7 @@ export function DemoDashboard() {
       description: '用户获得等值hypeUSD稳定币',
       status: currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : 'pending'
     },
-    {
-      id: 5,
-      title: '收益生成',
-      description: '通过Funding费率持续获得收益',
-      status: currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : 'pending'
-    },
-    {
-      id: 6,
-      title: '自动再平衡',
-      description: 'Delta偏离时自动调整头寸',
-      status: currentStep === 6 ? 'active' : 'pending'
-    }
+    // 简化为4步核心路径，进度显示为4/4
   ]
 
   // 自动播放演示
