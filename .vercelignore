@@ -1,0 +1,24 @@
+# Ignore local-only artifacts from Vercel uploads
+
+# docs & design
+PRD-*.md
+技术架构方案-*.md
+项目完成总结-*.md
+HypeUSD演示模式使用说明*.md
+HypeUSD项目总结与交接文档*.md
+wireframe-*.svg
+
+# not needed for deploy
+coverage
+*.pem
+*.tsbuildinfo
+*.log
+
+# dev caches
+node_modules
+.next/cache
+
+# local env
+.env*
+
+
